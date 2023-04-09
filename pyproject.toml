@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "okular"
+version = "1.0.0"
+description = "Parser and quick preview for Jenkins jobs logs"
+authors = ["Szymon Kłos <eszkadev@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
