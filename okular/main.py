@@ -47,6 +47,9 @@ def create_app(jenkins_api, jenkins_job):
                 name = jenkins_build.get_description()
                 date = jenkins_build.get_timestamp()
 
+                if status == None:
+                    continue
+
                 build = Builds(id=build_number, status=status, name=name, url=url, date=date)
                 db.session.add(build)
                 count = count + 1
