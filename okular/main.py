@@ -24,11 +24,19 @@ def create_app(jenkins_api, jenkins_job):
         for build in builds:
             fails = f''
             for fail in build.fails:
-                fails = f'{fails}<p class="test">{fail.name}</p>'
-            builds_html = f'{builds_html}<div class="build-container"><h4>{build.date} <a href="{build.url}">{build.id}</a>: {build.status}</h4><p class="title">{build.name}</p>{fails}</div>'
+                fails = f'{fails}<li class="list-group-item">{fail.name}</li>'
 
-        style = '<style>.build-container { margin: 10px; padding: 10px; border: solid 1px silver; }</style>'
-        return f'<html><head>{style}</head><body><p>Watching: {jenkins_api}, {jenkins_job}</p>{builds_html}</body></html>'
+            status_class = ''
+            if build.status == 'SUCCESS':
+                status_class = 'bg-success text-light'
+            elif build.status == 'FAILURE':
+                status_class = 'bg-danger text-light'
+
+            builds_html = f'{builds_html}<div class="card" style="width: 95%; margin: 10px auto;"><h4 class="card-header {status_class}"><a href="{build.url}">{build.id}</a>: {build.name}</h4><div class="card-body"><p>{build.date} {build.status}</p><ul class="list-group list-group-flush">{fails}</ul></div></div>'
+
+        style = '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">'
+        navbar = f'<nav class="navbar navbar-expand-lg navbar-light bg-light"><div class="container-fluid"><span class="nav-item">{jenkins_api}</span><span class="nav-item">Job: {jenkins_job}</span></div></nav>'
+        return f'<html><head>{style}</head><body>{navbar}{builds_html}</body></html>'
 
     @app.route('/update')
     def update():
