@@ -12,6 +12,8 @@ flask = "^2.2.3"
 gunicorn = "^20.1.0"
 jenkinsapi = "^0.3.13"
 pytest = "^7.3.0"
+sqlalchemy = "^2.0.9"
+flask-sqlalchemy = "^3.0.3"
 
 
 [build-system]
