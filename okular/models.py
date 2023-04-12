@@ -1,5 +1,9 @@
 from okular import db
 
+class Settings(db.Model):
+    name = db.Column(db.String(256), primary_key = True)
+    value = db.Column(db.String(1024))
+
 class BuildFails(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     build_id = db.Column(db.Integer, db.ForeignKey('builds.id'))
