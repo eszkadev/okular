@@ -25,7 +25,7 @@ def create_app(jenkins_api, jenkins_job):
         if not last_update is None:
             last_update_str = last_update.value
 
-        builds = Builds.query.order_by(Builds.id.desc()).all()
+        builds = Builds.query.order_by(Builds.id.desc()).limit(15).all()
         for build in builds:
             fails = f''
             for fail in build.fails:
