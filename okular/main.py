@@ -2,7 +2,7 @@ import html
 import jenkinsapi
 
 from datetime import datetime
-from flask import Flask
+from flask import Flask, request
 from jenkinsapi.jenkins import Jenkins
 from okular import db
 from okular.parser import Parser
@@ -18,6 +18,7 @@ def create_app(jenkins_api, jenkins_job):
 
     @app.route('/')
     def index():
+        args = request.args
         builds_html = f''
 
         last_update = Settings.query.filter_by(name='last_update').first()
@@ -25,7 +26,13 @@ def create_app(jenkins_api, jenkins_job):
         if not last_update is None:
             last_update_str = last_update.value
 
-        builds = Builds.query.order_by(Builds.id.desc()).limit(15).all()
+        limit = 15
+        page = int(args.get('page'))
+        if page is None:
+            page = 0
+
+        builds = Builds.query.order_by(Builds.id.desc()).offset(page*limit).limit(limit).all()
+        count = db.session.query(Builds).count()
         for build in builds:
             fails = f''
             for fail in build.fails:
@@ -41,7 +48,17 @@ def create_app(jenkins_api, jenkins_job):
 
         style = '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">'
         navbar = f'<nav class="navbar navbar-expand-lg navbar-light bg-light"><div class="container-fluid"><span class="nav-item">{jenkins_api}</span><span class="nav-item">Last update: {last_update_str}</span><span class="nav-item">Job: {jenkins_job}</span></div></nav>'
-        return f'<html><head>{style}</head><body>{navbar}{builds_html}</body></html>'
+
+        pages = '<nav class="d-flex justify-content-center flex-nowrap"><ul class="pagination">'
+        previous = page - 1
+        next = page + 1
+        if page > 0:
+            pages = pages + f'<li class="page-item"><a class="page-link" href="/?page={previous}">Previous</a></li>'
+        if count > limit * (page + 1):
+            pages = pages + f'<li class="page-item"><a class="page-link" href="/?page={next}">Next</a></li>'
+        pages = pages + '</ul></nav>'
+
+        return f'<html><head>{style}</head><body>{navbar}{builds_html}{pages}</body></html>'
 
     @app.route('/update')
     def update():
