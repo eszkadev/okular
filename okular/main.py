@@ -27,9 +27,11 @@ def create_app(jenkins_api, jenkins_job):
             last_update_str = last_update.value
 
         limit = 15
-        page = int(args.get('page'))
+        page = args.get('page')
         if page is None:
             page = 0
+        else:
+            page = int(page)
 
         builds = Builds.query.order_by(Builds.id.desc()).offset(page*limit).limit(limit).all()
         count = db.session.query(Builds).count()
