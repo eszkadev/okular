@@ -8,6 +8,19 @@ from okular import db
 from okular.parser import Parser
 from okular.models import Builds, BuildFails, Settings, Tests
 
+from okular.viewmodels.base import BaseViewModel
+from okular.viewmodels.job import JobViewModel
+
+from okular.views.job import JobView
+from okular.views.jobs import JobsView
+
+def get_last_update_string():
+    last_update = Settings.query.filter_by(name='last_update').first()
+    last_update_str = '-'
+    if not last_update is None:
+        last_update_str = last_update.value
+    return last_update_str
+
 def create_app(jenkins_api, jenkins_job):
     app = Flask(__name__)
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///okular.sqlite3'
@@ -17,14 +30,21 @@ def create_app(jenkins_api, jenkins_job):
         db.create_all()
 
     @app.route('/')
+    def main():
+        last_update_str = get_last_update_string();
+
+        jobs_view_model = BaseViewModel(
+            jenkins_api = jenkins_api,
+            last_update_str = last_update_str
+        )
+
+        view = JobsView(jobs_view_model)
+        return view.generateHTML()
+
+    @app.route('/job')
     def index():
         args = request.args
-        builds_html = f''
-
-        last_update = Settings.query.filter_by(name='last_update').first()
-        last_update_str = '-'
-        if not last_update is None:
-            last_update_str = last_update.value
+        last_update_str = get_last_update_string()
 
         limit = 15
         page = args.get('page')
@@ -35,32 +55,18 @@ def create_app(jenkins_api, jenkins_job):
 
         builds = Builds.query.order_by(Builds.id.desc()).offset(page*limit).limit(limit).all()
         count = db.session.query(Builds).count()
-        for build in builds:
-            fails = f''
-            for fail in build.fails:
-                fails = f'{fails}<li class="list-group-item">{fail.name}</li>'
 
-            status_class = ''
-            if build.status == 'SUCCESS':
-                status_class = 'bg-success text-light'
-            elif build.status == 'FAILURE':
-                status_class = 'bg-danger text-light'
-
-            builds_html = f'{builds_html}<div class="card" style="width: 95%; margin: 10px auto;"><h4 class="card-header {status_class}"><a href="{build.url}">{build.id}</a>: {build.name}</h4><div class="card-body"><p>{build.date} {build.status}</p><ul class="list-group list-group-flush">{fails}</ul></div></div>'
-
-        style = '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">'
-        navbar = f'<nav class="navbar navbar-expand-lg navbar-light bg-light"><div class="container-fluid"><span class="nav-item">{jenkins_api}</span><span class="nav-item">Last update: {last_update_str}</span><span class="nav-item">Job: {jenkins_job}</span></div></nav>'
-
-        pages = '<nav class="d-flex justify-content-center flex-nowrap"><ul class="pagination">'
-        previous = page - 1
-        next = page + 1
-        if page > 0:
-            pages = pages + f'<li class="page-item"><a class="page-link" href="/?page={previous}">Previous</a></li>'
-        if count > limit * (page + 1):
-            pages = pages + f'<li class="page-item"><a class="page-link" href="/?page={next}">Next</a></li>'
-        pages = pages + '</ul></nav>'
-
-        return f'<html><head>{style}</head><body>{navbar}{builds_html}{pages}</body></html>'
+        job_view_model = JobViewModel(
+            jenkins_api = jenkins_api,
+            jenkins_job = jenkins_job,
+            last_update_str = last_update_str,
+            page = page,
+            count = count,
+            limit = limit,
+            builds = builds
+        )
+        view = JobView(job_view_model)
+        return view.generateHTML()
 
     @app.route('/update')
     def update():
