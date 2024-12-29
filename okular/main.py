@@ -44,27 +44,18 @@ def create_app(jenkins_api, jenkins_job):
 
     @app.route('/job')
     def index():
-        args = request.args
         last_update_str = get_last_update_string()
-
         limit = 15
-        page = args.get('page')
-        if page is None:
-            page = 0
-        else:
-            page = int(page)
 
-        builds = Builds.query.order_by(Builds.id.desc()).offset(page*limit).limit(limit).all()
-        count = dbcontext.session.query(Builds).count()
+        args = request.args
+        page = args.get('page')
 
         job_view_model = JobViewModel(
             jenkins_api = jenkins_api,
             jenkins_job = jenkins_job,
             last_update_str = last_update_str,
             page = page,
-            count = count,
-            limit = limit,
-            builds = builds
+            limit = limit
         )
         view = JobView(job_view_model)
         return view.generateHTML()
