@@ -4,9 +4,10 @@ import jenkinsapi
 from datetime import datetime
 from flask import Flask, request
 from jenkinsapi.jenkins import Jenkins
-from okular import db
+from okular import dbcontext
 from okular.parser import Parser
-from okular.models import Builds, BuildFails, Settings, Tests
+
+from okular.db.models import Builds, BuildFails, Settings, Tests
 
 from okular.viewmodels.base import BaseViewModel
 from okular.viewmodels.job import JobViewModel
@@ -24,10 +25,10 @@ def get_last_update_string():
 def create_app(jenkins_api, jenkins_job):
     app = Flask(__name__)
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///okular.sqlite3'
-    db.init_app(app)
+    dbcontext.init_app(app)
 
     with app.app_context():
-        db.create_all()
+        dbcontext.create_all()
 
     @app.route('/')
     def main():
@@ -54,7 +55,7 @@ def create_app(jenkins_api, jenkins_job):
             page = int(page)
 
         builds = Builds.query.order_by(Builds.id.desc()).offset(page*limit).limit(limit).all()
-        count = db.session.query(Builds).count()
+        count = dbcontext.session.query(Builds).count()
 
         job_view_model = JobViewModel(
             jenkins_api = jenkins_api,
@@ -89,7 +90,7 @@ def create_app(jenkins_api, jenkins_job):
                     continue
 
                 build = Builds(id=build_number, status=status, name=name, url=url, date=date)
-                db.session.add(build)
+                dbcontext.session.add(build)
                 count = count + 1
 
                 console = html.escape(jenkins_build.get_console())
@@ -101,9 +102,9 @@ def create_app(jenkins_api, jenkins_job):
                     test = Tests.query.filter_by(name=test_name).first()
                     if test is None:
                         test = Tests(name=test_name)
-                        db.session.add(test)
+                        dbcontext.session.add(test)
                     fail = BuildFails(build_id=build_number, test_name=test_name)
-                    db.session.add(fail)
+                    dbcontext.session.add(fail)
 
             if found > 9:
                 break
@@ -111,11 +112,11 @@ def create_app(jenkins_api, jenkins_job):
         last_update = Settings.query.filter_by(name='last_update').first()
         if last_update is None:
             last_update = Settings(name='last_update', value=str(datetime.now))
-            db.session.add(last_update)
+            dbcontext.session.add(last_update)
         else:
             last_update.value = str(datetime.now())
 
-        db.session.commit()
+        dbcontext.session.commit()
         return f'Added {count} new builds'
 
     return app
