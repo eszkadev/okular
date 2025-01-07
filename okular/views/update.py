@@ -18,8 +18,10 @@ class UpdateView(BaseView):
 
 @update_blueprint.route('/update')
 def update():
-    if len(flask.current_app.config['JENKINS_API']) == 0 or len(flask.current_app.config['JENKINS_JOB']) == 0:
+    if len(flask.current_app.config['JENKINS_API']) == 0:
         return "Bad configuration: missing API URL"
+    if len(flask.current_app.config['JENKINS_JOB']) == 0:
+        return "Bad configuration: missing JOB"
 
     j = Jenkins(flask.current_app.config['JENKINS_API'])
     job = j[flask.current_app.config['JENKINS_JOB']]
