@@ -6,7 +6,7 @@ from okular.views import get_last_update_string
 
 jobs_blueprint = Blueprint("jobs", __name__, template_folder='templates')
 
-@jobs_blueprint.route('/')
+@jobs_blueprint.route('/jobs')
 def jobs():
     j = Jenkins(flask.current_app.config['JENKINS_API'])
     available_jobs = []

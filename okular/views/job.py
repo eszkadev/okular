@@ -7,8 +7,8 @@ from okular.viewmodels.job import JobViewModel
 
 job_blueprint = Blueprint("job", __name__, template_folder='templates')
 
-@job_blueprint.route('/job/<job>')
-def job(job):
+@job_blueprint.route('/') #job/<job>
+def job():
     last_update_str = get_last_update_string()
     limit = 15
 
@@ -17,7 +17,7 @@ def job(job):
 
     job_view_model = JobViewModel(
         jenkins_api = flask.current_app.config['JENKINS_API'],
-        jenkins_job = job,
+        jenkins_job = flask.current_app.config['JENKINS_JOB'],
         last_update_str = last_update_str,
         page = page,
         limit = limit
