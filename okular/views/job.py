@@ -40,8 +40,8 @@ class JobView(BaseView):
 
         return super().generateHTML(body_html)
 
-@job_blueprint.route('/job')
-def job():
+@job_blueprint.route('/job/<job>')
+def job(job):
     last_update_str = get_last_update_string()
     limit = 15
 
@@ -50,7 +50,7 @@ def job():
 
     job_view_model = JobViewModel(
         jenkins_api = flask.current_app.config['JENKINS_API'],
-        jenkins_job = flask.current_app.config['JENKINS_JOB'],
+        jenkins_job = job,
         last_update_str = last_update_str,
         page = page,
         limit = limit

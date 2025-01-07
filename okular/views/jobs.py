@@ -1,27 +1,20 @@
 import flask
-from flask import Blueprint
+from flask import Blueprint, render_template
+from jenkinsapi.jenkins import Jenkins
+
 from okular.views import get_last_update_string
-from okular.views.base import BaseView
-from okular.viewmodels.base import BaseViewModel
 
 jobs_blueprint = Blueprint("jobs", __name__, template_folder='templates')
 
-class JobsView(BaseView):
-    def __init__(self, model):
-        super().__init__(model)
-
-    def generateHTML(self, body = ''):
-        body = ''
-        return super().generateHTML(body)
-
 @jobs_blueprint.route('/')
 def jobs():
-    last_update_str = get_last_update_string()
+    j = Jenkins(flask.current_app.config['JENKINS_API'])
+    available_jobs = []
+    for item in j.jobs.iterkeys():
+        available_jobs.append(item)
 
-    jobs_view_model = BaseViewModel(
-        jenkins_api = flask.current_app.config['JENKINS_API'],
-        last_update_str = last_update_str
-    )
-
-    view = JobsView(jobs_view_model)
-    return view.generateHTML()
+    return render_template('jobs.html',
+                           jenkins_api = flask.current_app.config['JENKINS_API'],
+                           last_update_str = get_last_update_string(),
+                           navbar_right = '',
+                           available_jobs = available_jobs)
