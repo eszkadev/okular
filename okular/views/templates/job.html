@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block nav %}
+<span class="nav-item">{{navbar_right}}</span>
+{% endblock %}
+
+{% block main %}
+    {% for build in builds %}
+    <div class="card" style="width: 95%; margin: 10px auto;">
+        <h4 class="card-header {{build.status_class}}">
+            <a href="{build.build.url}">{{build.build.id}}</a>: {% autoescape false %} {{build.build.name}} {% endautoescape %}
+        </h4>
+        <div class="card-body">
+            <p>{{build.build.date}} {{build.build.status}}</p>
+            <ul class="list-group list-group-flush">
+                {% for fail in build.fails %}
+                <li class="list-group-item">{{fail}}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    <li><a href="job/{{item}}">{{item}}</a></li>
+    {% endfor %}
+
+    <nav class="d-flex justify-content-center flex-nowrap">
+        <ul class="pagination">
+            {% if page is gt(0) %}
+                <li class="page-item"><a class="page-link" href="?page={{page - 1}}">Previous</a></li>
+            {% endif %}
+            {% if count is gt(limit * (page + 1)) %}
+                <li class="page-item"><a class="page-link" href="?page={{page + 1}}">Next</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+
+{% endblock %}

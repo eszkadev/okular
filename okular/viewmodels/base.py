@@ -1,5 +1,7 @@
+from dataclasses import astuple, dataclass
+
+@dataclass
 class BaseViewModel:
-    def __init__(self, jenkins_api, last_update_str):
-        self.jenkins_api = jenkins_api
-        self.last_update_str = last_update_str
-        self.navbar_right = ''
+    jenkins_api: str
+    last_update_str: str
+    navbar_right: str = ''
