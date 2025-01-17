@@ -1,5 +1,3 @@
-import dataclasses
-
 import flask
 from flask import Blueprint, render_template, request
 from okular.views import get_last_update_string
@@ -23,4 +21,4 @@ def job():
         limit = limit
     )
 
-    return render_template('job.html', **(dataclasses.asdict(job_view_model)))
+    return render_template('job.html', **job_view_model.as_dict())

@@ -1,17 +1,15 @@
 from okular import dbcontext
 from okular.db.models import Builds
+from okular.viewmodels.base import BaseViewModel
 from dataclasses import dataclass
 
 @dataclass
-class JobViewModel:
-    jenkins_api: str
-    last_update_str: str
+class JobViewModel(BaseViewModel):
     jenkins_job: str
     page: int
     limit: int
     count: int
     builds: []
-    navbar_right: str = ''
 
     def __init__(self, jenkins_api, last_update_str, jenkins_job, page, limit):
         self.jenkins_api = jenkins_api
