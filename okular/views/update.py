@@ -5,16 +5,10 @@ from flask import Blueprint
 from jenkinsapi.jenkins import Jenkins
 
 from okular import dbcontext
-
 from okular.db.models import Builds, BuildFails, Settings, Tests
 from okular.parser import Parser
-from okular.views.base import BaseView
 
 update_blueprint = Blueprint("update", __name__, template_folder='templates')
-
-class UpdateView(BaseView):
-    def __init__(self, base_view_model):
-        super().__init__(base_view_model)
 
 @update_blueprint.route('/update')
 def update():
