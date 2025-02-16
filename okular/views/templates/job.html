@@ -1,7 +1,10 @@
 {% extends 'base.html' %}
 
 {% block nav %}
-<span class="nav-item">{{navbar_right}}</span>
+{% set dashboard_url = url_for('job_dashboard.job_dashboard', job=jenkins_job) %}
+<span class="nav-item">
+    <a href="{{dashboard_url}}">{{navbar_right}}</a>
+</span>
 {% endblock %}
 
 {% block main %}

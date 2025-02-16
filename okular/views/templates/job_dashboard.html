@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block nav %}
+{% set dashboard_url = url_for('job.job', job=jenkins_job) %}
+<span class="nav-item">
+    <a href="{{dashboard_url}}">{{navbar_right}}</a>
+</span>
+{% endblock %}
+
+{% block main %}
+<table class="table">
+  <thead>
+    <tr>
+      <th scope="col">Test</th>
+      <th scope="col">Number of fails</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for fail in fails %}
+    <tr>
+      <td>{{fail.test_name}}</td>
+      <td>{{fail.count}}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
