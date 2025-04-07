@@ -11,7 +11,7 @@
     {% for build in builds %}
     <div class="card" style="width: 95%; margin: 10px auto;">
         <h4 class="card-header {{build.status_class}}">
-            <a href="{build.build.url}">{{build.build.id}}</a>: {% autoescape false %} {{build.build.name}} {% endautoescape %}
+            <a href="{{build.build.url}}">{{build.build.id}}</a>: {% autoescape false %} {{build.build.name}} {% endautoescape %}
         </h4>
         <div class="card-body">
             <p>{{build.build.date}} {{build.build.status}}</p>
