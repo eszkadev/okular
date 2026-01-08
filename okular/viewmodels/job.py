@@ -21,7 +21,10 @@ class JobViewModel(BaseViewModel):
         if page is None:
             self.page = 0
         else:
-            self.page = int(page)
+            try:
+                self.page = max(0, int(page))
+            except (ValueError, TypeError):
+                self.page = 0
 
         builds = Builds.query.order_by(Builds.id.desc()).offset(self.page * self.limit).limit(self.limit).all()
         self.count = dbcontext.session.query(Builds).count()
