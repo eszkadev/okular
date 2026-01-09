@@ -11,8 +11,8 @@ class JobViewModel(BaseViewModel):
     count: int
     builds: []
 
-    def __init__(self, jenkins_api, last_update_str, jenkins_job, page, limit):
-        self.jenkins_api = jenkins_api
+    def __init__(self, jenkins_host, last_update_str, jenkins_job, page, limit):
+        self.jenkins_host = jenkins_host
         self.last_update_str = last_update_str
         self.navbar_right = 'Job: ' + jenkins_job
         self.jenkins_job = jenkins_job

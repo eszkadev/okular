@@ -10,7 +10,7 @@ def job_dashboard(job):
     last_update_str = get_last_update_string()
 
     job_dashboard_view_model = JobDashboardViewModel(
-        jenkins_api = flask.current_app.config['JENKINS_API'],
+        jenkins_host = flask.current_app.config['JENKINS_HOST'],
         jenkins_job = job,
         last_update_str = last_update_str
     )

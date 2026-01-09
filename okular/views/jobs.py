@@ -9,6 +9,7 @@ jobs_blueprint = Blueprint("jobs", __name__, template_folder='templates')
 def jobs():
     last_update_str = get_last_update_string()
     jobs_view_model = JobsViewModel(
+        jenkins_host=flask.current_app.config['JENKINS_HOST'],
         jenkins_api=flask.current_app.config['JENKINS_API'],
         last_update_str=last_update_str
     )

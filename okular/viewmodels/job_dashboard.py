@@ -13,8 +13,8 @@ class JobDashboardViewModel(BaseViewModel):
     builds_count: int
     success_rate: str
 
-    def __init__(self, jenkins_api, last_update_str, jenkins_job):
-        self.jenkins_api = jenkins_api
+    def __init__(self, jenkins_host, last_update_str, jenkins_job):
+        self.jenkins_host = jenkins_host
         self.last_update_str = last_update_str
         self.navbar_right = 'Job: ' + jenkins_job
         self.jenkins_job = jenkins_job

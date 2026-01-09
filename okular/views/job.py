@@ -14,7 +14,7 @@ def job():
     page = args.get('page')
 
     job_view_model = JobViewModel(
-        jenkins_api = flask.current_app.config['JENKINS_API'],
+        jenkins_host = flask.current_app.config['JENKINS_HOST'],
         jenkins_job = flask.current_app.config['JENKINS_JOB'],
         last_update_str = last_update_str,
         page = page,
