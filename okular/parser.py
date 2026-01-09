@@ -20,6 +20,7 @@ class Parser:
         fork_error_prefix = 'Failed to fork'
         build_timeout_prefix = 'Build timed out (after'
         cpp_compile_error_prefix = 'error:'
+        workspace_cleanup_error_prefix = 'ERROR: Failed to clean the workspace'
 
         input = self.clean_text(self.raw_input)
         for line in input.split('\n'):
@@ -44,6 +45,8 @@ class Parser:
             if line.find(cpp_compile_error_prefix) != -1:
                 if 'cpp_compile_error' not in self.fails:
                     self.fails.append('cpp_compile_error')
+            if line.find(workspace_cleanup_error_prefix) != -1:
+                self.fails.append('workspace_cleanup_error')
 
         for line in self.raw_input.split('\n'):
             if line.find(cypress_fail_summary_prefix) != -1:
