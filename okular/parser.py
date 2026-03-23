@@ -14,6 +14,7 @@ class Parser:
         unittest_fail_prefix = 'Test failed on '
         write_error_prefix = 'write error: Resource temporarily unavailable'
         cypress_fail_summary_prefix = '[31mâ[39m'
+        cypress_fail_summary_clean_prefix = '  │ ✖  '
         kill_wrapper_prefix = 'Information about the killed process group'
         tsc_error_prefix = 'error TS'
         git_fetch_error_prefix = 'ERROR: Error fetching remote repo'
@@ -50,6 +51,9 @@ class Parser:
 
         for line in self.raw_input.split('\n'):
             if line.find(cypress_fail_summary_prefix) != -1:
+                test_name = self.clean_text(line.split(' ')[5])
+                self.fails.append(test_name)
+            if line.find(cypress_fail_summary_clean_prefix) != -1:
                 test_name = self.clean_text(line.split(' ')[5])
                 self.fails.append(test_name)
 
