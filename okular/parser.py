@@ -22,6 +22,7 @@ class Parser:
         build_timeout_prefix = 'Build timed out (after'
         cpp_compile_error_prefix = 'error:'
         workspace_cleanup_error_prefix = 'ERROR: Failed to clean the workspace'
+        test_failed_prefix = 'Test failed: '
 
         input = self.clean_text(self.raw_input)
         for line in input.split('\n'):
@@ -48,6 +49,18 @@ class Parser:
                     self.fails.append('cpp_compile_error')
             if line.find(workspace_cleanup_error_prefix) != -1:
                 self.fails.append('workspace_cleanup_error')
+            if line.find(test_failed_prefix) != -1:
+                after_prefix = line[line.find(test_failed_prefix) + len(test_failed_prefix):]
+                parts = after_prefix.split(' / ')
+                if parts:
+                    spec_full = parts[0]
+                    segments = spec_full.split('/')
+                    if len(segments) >= 3:
+                        spec_name = '/'.join(segments[2:])
+                    else:
+                        spec_name = spec_full
+                    if spec_name not in self.fails:
+                        self.fails.append(spec_name)
 
         for line in self.raw_input.split('\n'):
             if line.find(cypress_fail_summary_prefix) != -1:
