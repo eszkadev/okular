@@ -21,6 +21,24 @@ make: *** [Makefile:42: Module.o] Error 1
     assert parser.get_fails().count('cpp_compile_error') == 1
 
 
+# When the job is aborted before printing full summary
+def test_cypress_test_failed_new_format():
+    text = '''      cy:command ✔  fail:\t
+                    Test failed: integration_tests/desktop/writer/a11y_dialog_spec.js / Accessibility Writer Dialog Tests / Common Dialog .uno:AcceptTrackedChanges
+
+                    Found A11y errors:
+      cy:command ✔  fail:\t
+                    Test failed: integration_tests/desktop/writer/a11y_dialog_spec.js / Accessibility Writer Dialog Tests / Common Dialog .uno:AcceptTrackedChanges
+
+>>>>>> Information about the killed process group:
+'''
+    parser = Parser(text)
+    parser.parse()
+    assert 'writer/a11y_dialog_spec.js' in parser.get_fails()
+    # Should be deduplicated
+    assert parser.get_fails().count('writer/a11y_dialog_spec.js') == 1
+
+
 def test_workspace_cleanup_error():
     text = '''Started by upstream project "MyProject" build number 1234
 Building remotely on BuildAgent (windows) in workspace C:\\jenkins\\workspace\\my_job
