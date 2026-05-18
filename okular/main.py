@@ -4,6 +4,7 @@ from flask import Flask
 from okular.router import Router
 from urllib.parse import urlparse
 
+
 def create_app(jenkins_api, jenkins_job):
     app = Flask(__name__)
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///okular.sqlite3'

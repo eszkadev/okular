@@ -15,6 +15,9 @@ class Builds(dbcontext.Model):
     name = dbcontext.Column(dbcontext.String(256))
     url = dbcontext.Column(dbcontext.String(1024))
     date = dbcontext.Column(dbcontext.DateTime)
+    gerrit_url = dbcontext.Column(dbcontext.String(1024), nullable=True)
+    gerrit_change_number = dbcontext.Column(dbcontext.String(32), nullable=True)
+    gerrit_subject = dbcontext.Column(dbcontext.String(512), nullable=True)
     fails = dbcontext.relationship('Tests', secondary=BuildFails.__table__, back_populates='builds')
 
 class Tests(dbcontext.Model):

@@ -1,3 +1,4 @@
+import html
 import re
 
 class Parser:
@@ -5,6 +6,9 @@ class Parser:
         # clear console commands
         self.raw_input = input
         self.fails = []
+        self.gerrit_url = None
+        self.gerrit_change_number = None
+        self.gerrit_subject = None
 
     def clean_text(self, text):
         return re.sub(r'\[\d+m', '', text)
@@ -70,5 +74,59 @@ class Parser:
                 test_name = self.clean_text(line.split(' ')[5])
                 self.fails.append(test_name)
 
+        # Extract Gerrit metadata. The /update view runs html.escape() over the
+        # console before handing it to us, so single/double quotes and ampersands
+        # arrive as entities; unescape once before scanning.
+        gerrit_input = html.unescape(input)
+
+        # `Triggered by Gerrit: <url>` is what the Gerrit Trigger plugin prints
+        # in the build cause. The change number is the URL's last path segment.
+        triggered_pattern = re.compile(r'Triggered by Gerrit:\s*(\S+)')
+        for line in gerrit_input.split('\n'):
+            m = triggered_pattern.search(line)
+            if m and self.gerrit_url is None:
+                self.gerrit_url = m.group(1)
+                tail = self.gerrit_url.rstrip('/').rsplit('/', 1)[-1]
+                if tail.isdigit():
+                    self.gerrit_change_number = tail
+                break
+
+        # `Commit message: "<subject>"` is printed by the Jenkins git plugin
+        # after checkout. Use the first occurrence.
+        commit_msg_pattern = re.compile(r'Commit message:\s*"(.*)"\s*$')
+        for line in gerrit_input.split('\n'):
+            m = commit_msg_pattern.search(line)
+            if m and self.gerrit_subject is None:
+                self.gerrit_subject = m.group(1)
+                break
+
+        # Fallback: explicit env-dump form (`KEY=value` shell trace) for jobs
+        # that echo the Gerrit Trigger parameters.
+        gerrit_pattern = re.compile(
+            r'(?:^|\s)(GERRIT_CHANGE_URL|GERRIT_CHANGE_NUMBER|GERRIT_CHANGE_SUBJECT)=(.*)$'
+        )
+        for line in gerrit_input.split('\n'):
+            m = gerrit_pattern.search(line)
+            if not m:
+                continue
+            key, value = m.group(1), m.group(2)
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+                value = value[1:-1]
+            if key == 'GERRIT_CHANGE_URL' and self.gerrit_url is None:
+                self.gerrit_url = value
+            elif key == 'GERRIT_CHANGE_NUMBER' and self.gerrit_change_number is None:
+                self.gerrit_change_number = value
+            elif key == 'GERRIT_CHANGE_SUBJECT' and self.gerrit_subject is None:
+                self.gerrit_subject = value
+
     def get_fails(self):
         return self.fails
+
+    def get_gerrit_url(self):
+        return self.gerrit_url
+
+    def get_gerrit_change_number(self):
+        return self.gerrit_change_number
+
+    def get_gerrit_subject(self):
+        return self.gerrit_subject
