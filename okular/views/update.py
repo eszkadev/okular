@@ -35,14 +35,23 @@ def update():
             if status is None:
                 continue
 
-            build = Builds(id=build_number, status=status, name=name, url=url, date=date)
-            dbcontext.session.add(build)
-            count = count + 1
-
             console = html.escape(jenkins_build.get_console())
             parser = Parser(console)
             parser.parse()
             fails = parser.get_fails()
+
+            build = Builds(
+                id=build_number,
+                status=status,
+                name=name,
+                url=url,
+                date=date,
+                gerrit_url=parser.get_gerrit_url(),
+                gerrit_change_number=parser.get_gerrit_change_number(),
+                gerrit_subject=parser.get_gerrit_subject(),
+            )
+            dbcontext.session.add(build)
+            count = count + 1
 
             for test_name in fails:
                 test = Tests.query.filter_by(name=test_name).first()
