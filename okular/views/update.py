@@ -3,6 +3,7 @@ import html
 from datetime import datetime
 from flask import Blueprint
 from jenkinsapi.jenkins import Jenkins
+from jenkinsapi.job import Job
 
 from okular import dbcontext
 from okular.db.models import Builds, BuildFails, Settings, Tests
@@ -17,8 +18,17 @@ def update():
     if len(flask.current_app.config['JENKINS_JOB']) == 0:
         return "Bad configuration: missing JOB"
 
-    j = Jenkins(flask.current_app.config['JENKINS_API'])
-    job = j[flask.current_app.config['JENKINS_JOB']]
+    api_url = flask.current_app.config['JENKINS_API']
+    job_name = flask.current_app.config['JENKINS_JOB']
+
+    # Construct the Job directly instead of `Jenkins(api_url)[job_name]`. The
+    # eager Jenkins() poll fetches <root>/api/python, i.e. the whole list of
+    # jobs on the server, just to index into one of them. Pass lazy=True to
+    # skip that root poll and build the Job from its own URL so we only ever
+    # touch <root>/job/<job_name>/... endpoints.
+    j = Jenkins(api_url, lazy=True)
+    job_url = '%s/job/%s' % (api_url.rstrip('/'), job_name)
+    job = Job(job_url, job_name, j)
     builds = job.get_build_dict()
     count = 0
     found = 0
