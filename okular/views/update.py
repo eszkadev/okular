@@ -1,9 +1,9 @@
 import flask
 import html
+import time
+import requests
 from datetime import datetime
 from flask import Blueprint
-from jenkinsapi.jenkins import Jenkins
-from jenkinsapi.job import Job
 
 from okular import dbcontext
 from okular.db.models import Builds, BuildFails, Settings, Tests
@@ -18,34 +18,50 @@ def update():
     if len(flask.current_app.config['JENKINS_JOB']) == 0:
         return "Bad configuration: missing JOB"
 
-    api_url = flask.current_app.config['JENKINS_API']
+    api_url = flask.current_app.config['JENKINS_API'].rstrip('/')
     job_name = flask.current_app.config['JENKINS_JOB']
+    job_url = '%s/job/%s' % (api_url, job_name)
 
-    # Construct the Job directly instead of `Jenkins(api_url)[job_name]`. The
-    # eager Jenkins() poll fetches <root>/api/python, i.e. the whole list of
-    # jobs on the server, just to index into one of them. Pass lazy=True to
-    # skip that root poll and build the Job from its own URL so we only ever
-    # touch <root>/job/<job_name>/... endpoints.
-    j = Jenkins(api_url, lazy=True)
-    job_url = '%s/job/%s' % (api_url.rstrip('/'), job_name)
-    job = Job(job_url, job_name, j)
-    builds = job.get_build_dict()
+    # Hit the job's own REST endpoints directly instead of going through the
+    # jenkinsapi client, which polls <root>/api/python (the whole list of jobs
+    # on the server) just to reach one job. The `tree` filter trims each
+    # response to the fields we store, and the {0,10} range fetches only the
+    # 10 newest builds rather than the full history.
+    session = requests.Session()
+    resp = session.get(
+        '%s/api/json' % job_url,
+        params={'tree': 'builds[number,url]{0,10}'},
+    )
+    resp.raise_for_status()
+    builds = resp.json().get('builds', [])
+
     count = 0
     found = 0
-    for build_number in builds:
+    for build_info in builds:
         found = found + 1
-        url = builds[build_number]
+        build_number = build_info['number']
+        url = build_info['url']
         build = Builds.query.filter_by(id=build_number).first()
         if build is None:
-            jenkins_build = job[build_number]
-            status = jenkins_build.get_status()
-            name = jenkins_build.get_description()
-            date = jenkins_build.get_timestamp()
+            meta = session.get(
+                '%s/%s/api/json' % (job_url, build_number),
+                params={'tree': 'result,description,timestamp'},
+            )
+            meta.raise_for_status()
+            meta = meta.json()
+
+            status = meta.get('result')
+            name = meta.get('description')
+            # Match jenkinsapi's get_timestamp(): a naive UTC datetime built
+            # from the Java epoch-milliseconds value.
+            date = datetime(*time.gmtime(meta['timestamp'] / 1000.0)[:6])
 
             if status is None:
                 continue
 
-            console = html.escape(jenkins_build.get_console())
+            console_resp = session.get('%s/%s/consoleText' % (job_url, build_number))
+            console_resp.raise_for_status()
+            console = html.escape(console_resp.text)
             parser = Parser(console)
             parser.parse()
             fails = parser.get_fails()
