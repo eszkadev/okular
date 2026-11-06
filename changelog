@@ -1,3 +1,7 @@
+#### 2026-11-06
+- add JSON API `/api/job/<job>/dashboard?date=YYYY-MM-DD` returning the full per-day fail summary
+- dashboard: include today's builds in the last-week window
+
 #### 2025-04-07
 - fixed links to the Jenkins job run
 - add success rate counter to the dashboard view
