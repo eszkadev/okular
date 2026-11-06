@@ -32,34 +32,63 @@ def client():
         yield app.test_client()
 
 
+def samples(body, metric):
+    """Map label string to value for every sample of one metric."""
+    found = {}
+    for line in body.splitlines():
+        if line.startswith(metric + '{'):
+            labels, value = line[len(metric):].rsplit(' ', 1)
+            found[labels] = value
+    return found
+
+
 def test_returns_every_failing_test_for_the_day(client):
     response = client.get('/api/job/job/dashboard?date=2026-11-05')
     assert response.status_code == 200
-    body = response.get_json()
+    assert response.content_type == 'text/plain; version=0.0.4; charset=utf-8'
+    body = response.get_data(as_text=True)
 
-    assert body['job'] == 'job'
-    assert body['date'] == '2026-11-05'
-    assert body['builds_count'] == 14
-    assert body['build_fails_count'] == 13
-    assert body['success_rate'] == 7
+    day = '{jenkins_job="job",date="2026-11-05"}'
+    assert samples(body, 'okular_day_builds') == {day: '14'}
+    assert samples(body, 'okular_day_failed_builds') == {day: '13'}
+    assert samples(body, 'okular_day_success_rate_percent') == {day: '7'}
+    assert '# TYPE okular_day_test_failures gauge' in body
 
-    assert len(body['fails']) == 12
-    assert body['fails'][0] == {'test_name': 'test_00', 'count': 2}
-    assert body['fails'][1] == {'test_name': 'test_01', 'count': 2}
-    assert all(fail['count'] == 1 for fail in body['fails'][2:])
-    assert 'other_day' not in [fail['test_name'] for fail in body['fails']]
+    failures = samples(body, 'okular_day_test_failures')
+    assert len(failures) == 12
+    assert failures['{jenkins_job="job",date="2026-11-05",test="test_00"}'] == '2'
+    assert failures['{jenkins_job="job",date="2026-11-05",test="test_01"}'] == '2'
+    assert 'other_day' not in body
+    # Every test name is written once and the list is ordered by count, descending.
+    names = [line.split('test="')[1].split('"')[0]
+             for line in body.splitlines() if line.startswith('okular_day_test_failures{')]
+    assert names[:2] == ['test_00', 'test_01']
+    assert sorted(names[2:]) == names[2:]
 
 
 def test_day_without_builds(client):
-    body = client.get('/api/job/job/dashboard?date=2026-01-01').get_json()
-    assert body == {'job': 'job', 'date': '2026-01-01', 'builds_count': 0,
-                    'build_fails_count': 0, 'success_rate': None, 'fails': []}
+    body = client.get('/api/job/job/dashboard?date=2026-01-01').get_data(as_text=True)
+    day = '{jenkins_job="job",date="2026-01-01"}'
+    assert samples(body, 'okular_day_builds') == {day: '0'}
+    assert samples(body, 'okular_day_failed_builds') == {day: '0'}
+    # Without builds there is no rate to report, so the metric has no sample.
+    assert samples(body, 'okular_day_success_rate_percent') == {}
+    assert samples(body, 'okular_day_test_failures') == {}
+
+
+def test_label_values_are_escaped(client):
+    app = client.application
+    with app.app_context():
+        add_build(400, datetime(2026, 11, 7, 1, 0), ['quote"back\\slash'])
+        dbcontext.session.commit()
+    body = client.get('/api/job/job/dashboard?date=2026-11-07').get_data(as_text=True)
+    assert 'test="quote\\"back\\\\slash"' in body
 
 
 def test_invalid_date(client):
     response = client.get('/api/job/job/dashboard?date=yesterday')
     assert response.status_code == 400
-    assert 'error' in response.get_json()
+    assert 'Invalid date' in response.get_data(as_text=True)
 
 
 def test_dashboard_page_keeps_top_ten(client):
