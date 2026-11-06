@@ -1,5 +1,5 @@
 #### 2026-11-06
-- add `/api/job/<job>/dashboard?date=YYYY-MM-DD` returning the full per-day fail summary in Prometheus text format
+- add `/api/job/<job>/dashboard?date=YYYY-MM-DD` returning the full per-day fail summary as JSON or in Prometheus text format
 - dashboard: include today's builds in the last-week window
 
 #### 2025-04-07

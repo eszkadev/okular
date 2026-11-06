@@ -1,6 +1,6 @@
 import flask
 from datetime import date, datetime, timedelta
-from flask import Blueprint, Response, render_template, request
+from flask import Blueprint, Response, jsonify, render_template, request
 from okular.views import get_last_update_string
 from okular.viewmodels.job_dashboard import JobDashboardViewModel, query_fail_summary, success_rate_percent
 
@@ -32,26 +32,36 @@ def prometheus_sample(name, labels, value):
     return '%s{%s} %s' % (name, pairs, value)
 
 
-@job_dashboard_blueprint.route('/api/job/<job>/dashboard')
-def job_dashboard_api(job):
-    """One day's summary in the Prometheus text exposition format.
+def requested_format():
+    """Output format of the summary: the format query parameter, else the Accept header.
 
-    Every failing test is listed, not only the top 10 of the dashboard page.
-    Query parameter `date` selects the day as YYYY-MM-DD; defaults to today.
+    Returns 'json' or 'prometheus', or None when the format parameter holds another value.
     """
-    date_arg = request.args.get('date')
-    if date_arg is None:
-        day = date.today()
-    else:
-        try:
-            day = date.fromisoformat(date_arg)
-        except ValueError:
-            return Response('Invalid date, expected YYYY-MM-DD\n', status=400, mimetype='text/plain')
+    chosen = request.args.get('format')
+    if chosen is None:
+        # Only a client that prefers JSON over plain text gets JSON. A wildcard rates both the
+        # same, so curl, a browser and the Prometheus scraper all get the text format.
+        accepted = request.accept_mimetypes
+        if accepted['application/json'] > accepted['text/plain']:
+            return 'json'
+        return 'prometheus'
+    if chosen in ('json', 'prometheus'):
+        return chosen
+    return None
 
-    start = datetime.combine(day, datetime.min.time())
-    summary = query_fail_summary(start, start + timedelta(days=1))
-    rate = success_rate_percent(summary['builds_count'], summary['build_fails_count'])
 
+def summary_as_json(job, day, summary, rate):
+    return jsonify({
+        'job': job,
+        'date': day.isoformat(),
+        'builds_count': summary['builds_count'],
+        'build_fails_count': summary['build_fails_count'],
+        'success_rate': rate,
+        'fails': summary['fails'],
+    })
+
+
+def summary_as_prometheus(job, day, summary, rate):
     # The label is named jenkins_job because Prometheus attaches its own job label to every scraped sample.
     labels = {'jenkins_job': job, 'date': day.isoformat()}
 
@@ -74,3 +84,33 @@ def job_dashboard_api(job):
         lines.append(prometheus_sample('okular_day_test_failures', dict(labels, test=fail['test_name']), fail['count']))
 
     return Response('\n'.join(lines) + '\n', content_type=PROMETHEUS_CONTENT_TYPE)
+
+
+@job_dashboard_blueprint.route('/api/job/<job>/dashboard')
+def job_dashboard_api(job):
+    """One day's summary, with every failing test and not only the top 10 of the dashboard page.
+
+    Query parameter `date` selects the day as YYYY-MM-DD; defaults to today.
+    Query parameter `format` selects `json` or `prometheus` (the Prometheus text exposition
+    format). Without it a client that accepts application/json gets JSON, anyone else Prometheus.
+    """
+    output = requested_format()
+    if output is None:
+        return Response('Invalid format, expected json or prometheus\n', status=400, mimetype='text/plain')
+
+    date_arg = request.args.get('date')
+    if date_arg is None:
+        day = date.today()
+    else:
+        try:
+            day = date.fromisoformat(date_arg)
+        except ValueError:
+            return Response('Invalid date, expected YYYY-MM-DD\n', status=400, mimetype='text/plain')
+
+    start = datetime.combine(day, datetime.min.time())
+    summary = query_fail_summary(start, start + timedelta(days=1))
+    rate = success_rate_percent(summary['builds_count'], summary['build_fails_count'])
+
+    if output == 'json':
+        return summary_as_json(job, day, summary, rate)
+    return summary_as_prometheus(job, day, summary, rate)

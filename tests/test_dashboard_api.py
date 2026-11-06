@@ -85,6 +85,56 @@ def test_label_values_are_escaped(client):
     assert 'test="quote\\"back\\\\slash"' in body
 
 
+def test_json_format_lists_every_failing_test(client):
+    response = client.get('/api/job/job/dashboard?date=2026-11-05&format=json')
+    assert response.status_code == 200
+    assert response.content_type == 'application/json'
+    body = response.get_json()
+
+    assert body['job'] == 'job'
+    assert body['date'] == '2026-11-05'
+    assert body['builds_count'] == 14
+    assert body['build_fails_count'] == 13
+    assert body['success_rate'] == 7
+
+    assert len(body['fails']) == 12
+    assert body['fails'][0] == {'test_name': 'test_00', 'count': 2}
+    assert body['fails'][1] == {'test_name': 'test_01', 'count': 2}
+    assert all(fail['count'] == 1 for fail in body['fails'][2:])
+
+
+def test_json_format_day_without_builds(client):
+    body = client.get('/api/job/job/dashboard?date=2026-01-01&format=json').get_json()
+    assert body == {'job': 'job', 'date': '2026-01-01', 'builds_count': 0,
+                    'build_fails_count': 0, 'success_rate': None, 'fails': []}
+
+
+def test_accept_header_selects_json(client):
+    response = client.get('/api/job/job/dashboard?date=2026-11-05',
+                          headers={'Accept': 'application/json'})
+    assert response.content_type == 'application/json'
+    assert response.get_json()['builds_count'] == 14
+
+
+def test_wildcard_accept_keeps_prometheus_format(client):
+    # curl and the Prometheus scraper both send a wildcard, so they get the text format.
+    for accept in ['*/*', 'application/openmetrics-text;version=1.0.0;q=0.5,text/plain;version=0.0.4;q=0.5,*/*;q=0.1']:
+        response = client.get('/api/job/job/dashboard?date=2026-11-05', headers={'Accept': accept})
+        assert response.content_type == 'text/plain; version=0.0.4; charset=utf-8'
+
+
+def test_format_parameter_wins_over_accept_header(client):
+    response = client.get('/api/job/job/dashboard?date=2026-11-05&format=prometheus',
+                          headers={'Accept': 'application/json'})
+    assert response.content_type == 'text/plain; version=0.0.4; charset=utf-8'
+
+
+def test_invalid_format(client):
+    response = client.get('/api/job/job/dashboard?format=xml')
+    assert response.status_code == 400
+    assert 'Invalid format' in response.get_data(as_text=True)
+
+
 def test_invalid_date(client):
     response = client.get('/api/job/job/dashboard?date=yesterday')
     assert response.status_code == 400
