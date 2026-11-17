@@ -1,4 +1,4 @@
-FROM python:3.12
+FROM python:3.13
 WORKDIR /usr/local/okular
 RUN mkdir -p /usr/local/var/okular.main-instance
 
