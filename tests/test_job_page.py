@@ -42,3 +42,13 @@ def test_change_link_only_for_web_addresses(client):
     html = client.get('/').get_data(as_text=True)
     assert 'ftp://gerrit.example/5678' not in html
     assert '<a href="https://jenkins.example/job/job/3/">3</a>: writer: keep tabs' in html
+
+
+def test_pages_allow_no_script(client):
+    for path in ['/', '/job/job/dashboard', '/api/job/job/dashboard']:
+        policy = client.get(path).headers['Content-Security-Policy']
+        directives = dict(part.strip().split(' ', 1) for part in policy.split(';'))
+        assert directives['default-src'] == "'none'"
+        assert 'script-src' not in directives
+        assert directives['style-src'] == "https://cdn.jsdelivr.net 'unsafe-inline'"
+        assert directives['frame-ancestors'] == "'none'"
