@@ -1,5 +1,6 @@
 from okular import dbcontext
 from okular.db.models import Builds
+from okular.parser import is_web_url
 from okular.viewmodels.base import BaseViewModel
 from dataclasses import dataclass
 
@@ -41,5 +42,9 @@ class JobViewModel(BaseViewModel):
             for fail in build.fails:
                 fails.append(fail.name)
 
-            entry = {'build': build, 'status_class': status_class, 'fails': fails}
+            # Rows stored by older versions may hold any URL, so the link is checked again here.
+            gerrit_url = build.gerrit_url if is_web_url(build.gerrit_url) else None
+
+            entry = {'build': build, 'status_class': status_class, 'fails': fails,
+                     'gerrit_url': gerrit_url}
             self.builds.append(entry)

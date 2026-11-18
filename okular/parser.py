@@ -1,6 +1,12 @@
 import html
 import re
 
+
+def is_web_url(url):
+    """True when url is an http or https address."""
+    return url is not None and url.lower().startswith(('http://', 'https://'))
+
+
 class Parser:
     def __init__(self, input):
         # clear console commands
@@ -81,10 +87,11 @@ class Parser:
 
         # `Triggered by Gerrit: <url>` is what the Gerrit Trigger plugin prints
         # in the build cause. The change number is the URL's last path segment.
+        # Only http and https URLs are kept, here and in the fallback below.
         triggered_pattern = re.compile(r'Triggered by Gerrit:\s*(\S+)')
         for line in gerrit_input.split('\n'):
             m = triggered_pattern.search(line)
-            if m and self.gerrit_url is None:
+            if m and self.gerrit_url is None and is_web_url(m.group(1)):
                 self.gerrit_url = m.group(1)
                 tail = self.gerrit_url.rstrip('/').rsplit('/', 1)[-1]
                 if tail.isdigit():
@@ -113,7 +120,9 @@ class Parser:
             if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
                 value = value[1:-1]
             if key == 'GERRIT_CHANGE_URL' and self.gerrit_url is None:
-                self.gerrit_url = value
+                value = value.strip()
+                if is_web_url(value):
+                    self.gerrit_url = value
             elif key == 'GERRIT_CHANGE_NUMBER' and self.gerrit_change_number is None:
                 self.gerrit_change_number = value
             elif key == 'GERRIT_CHANGE_SUBJECT' and self.gerrit_subject is None:

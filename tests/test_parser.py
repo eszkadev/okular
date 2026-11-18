@@ -53,3 +53,34 @@ Finished: FAILURE
     parser = Parser(text)
     parser.parse()
     assert 'workspace_cleanup_error' in parser.get_fails()
+
+
+def test_gerrit_metadata_from_build_cause():
+    text = '''Triggered by Gerrit: https://gerrit.example/c/online/+/1234
+Commit message: "calc: fix paste of wide text"
+'''
+    parser = Parser(text)
+    parser.parse()
+    assert parser.get_gerrit_url() == 'https://gerrit.example/c/online/+/1234'
+    assert parser.get_gerrit_change_number() == '1234'
+    assert parser.get_gerrit_subject() == 'calc: fix paste of wide text'
+
+
+def test_gerrit_url_keeps_only_web_addresses():
+    text = '''Triggered by Gerrit: ftp://gerrit.example/1234
+GERRIT_CHANGE_URL=mailto:review@gerrit.example
+GERRIT_CHANGE_URL=HTTPS://gerrit.example/c/online/+/1234
+'''
+    parser = Parser(text)
+    parser.parse()
+    assert parser.get_gerrit_url() == 'HTTPS://gerrit.example/c/online/+/1234'
+
+
+def test_no_gerrit_url_without_a_web_address():
+    text = '''Started by timer
+GERRIT_CHANGE_URL=ftp://gerrit.example/1234
+GERRIT_CHANGE_NUMBER=1234
+'''
+    parser = Parser(text)
+    parser.parse()
+    assert parser.get_gerrit_url() is None
